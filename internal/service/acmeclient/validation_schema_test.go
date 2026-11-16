@@ -29,6 +29,8 @@ func TestConvertValidationSchemaToStruct(t *testing.T) {
 	require.Equal(t, "0", validation.Enabled)
 	require.Equal(t, "cf-dns", validation.Name)
 	require.Equal(t, api.SelectedMap("dns01"), validation.Method)
+	require.Equal(t, api.SelectedMap("opnsense"), validation.HttpService)
+	require.Equal(t, api.SelectedMap("acme"), validation.TlsalpnService)
 	require.Equal(t, api.SelectedMap("dns_cf"), validation.DnsService)
 	require.Equal(t, "dummy-token", validation.DnsCfToken)
 	require.Equal(t, "zone123", validation.DnsCfZoneId)
