@@ -39,19 +39,23 @@ func TestConvertValidationSchemaToStruct(t *testing.T) {
 
 func TestOverlayValidationManagedFields(t *testing.T) {
 	existing := &opnacme.Validation{
-		Enabled:    "1",
-		Name:       "old",
-		Method:     api.SelectedMap("dns01"),
-		DnsService: api.SelectedMap("dns_cf"),
-		DnsAwsId:   "keep-me",
-		DnsCfToken: "old-token",
+		Enabled:        "1",
+		Name:           "old",
+		Method:         api.SelectedMap("dns01"),
+		HttpService:    api.SelectedMap("custom-http"),
+		TlsalpnService: api.SelectedMap("custom-tls"),
+		DnsService:     api.SelectedMap("dns_cf"),
+		DnsAwsId:       "keep-me",
+		DnsCfToken:     "old-token",
 	}
 	planned := &opnacme.Validation{
-		Enabled:    "0",
-		Name:       "new",
-		Method:     api.SelectedMap("dns01"),
-		DnsService: api.SelectedMap("dns_cf"),
-		DnsCfToken: "new-token",
+		Enabled:        "0",
+		Name:           "new",
+		Method:         api.SelectedMap("dns01"),
+		HttpService:    api.SelectedMap("opnsense"),
+		TlsalpnService: api.SelectedMap("acme"),
+		DnsService:     api.SelectedMap("dns_cf"),
+		DnsCfToken:     "new-token",
 	}
 
 	overlayValidationManagedFields(existing, planned)
@@ -59,6 +63,8 @@ func TestOverlayValidationManagedFields(t *testing.T) {
 	require.Equal(t, "new", existing.Name)
 	require.Equal(t, "new-token", existing.DnsCfToken)
 	require.Equal(t, "keep-me", existing.DnsAwsId)
+	require.Equal(t, api.SelectedMap("custom-http"), existing.HttpService)
+	require.Equal(t, api.SelectedMap("custom-tls"), existing.TlsalpnService)
 }
 
 func TestConvertValidationStructToSchema(t *testing.T) {
@@ -75,4 +81,5 @@ func TestConvertValidationStructToSchema(t *testing.T) {
 	require.True(t, model.Enabled.ValueBool())
 	require.Equal(t, "cf-dns", model.Name.ValueString())
 	require.Equal(t, "secret", model.DnsCfToken.ValueString())
+	require.Equal(t, "0", model.DnsSleep.ValueString())
 }

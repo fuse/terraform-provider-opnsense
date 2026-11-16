@@ -186,13 +186,18 @@ func convertValidationSchemaToStruct(d *validationResourceModel) (*acmeclient.Va
 }
 
 func convertValidationStructToSchema(d *acmeclient.Validation) (*validationResourceModel, error) {
+	dnsSleep := d.DnsSleep
+	if dnsSleep == "" {
+		dnsSleep = "0"
+	}
+
 	return &validationResourceModel{
 		Enabled:        types.BoolValue(tools.StringToBool(d.Enabled)),
 		Name:           types.StringValue(d.Name),
 		Description:    tools.StringOrNull(d.Description),
 		Method:         types.StringValue(d.Method.String()),
 		DnsService:     types.StringValue(d.DnsService.String()),
-		DnsSleep:       tools.StringOrNull(d.DnsSleep),
+		DnsSleep:       types.StringValue(dnsSleep),
 		DnsCfEmail:     tools.StringOrNull(d.DnsCfEmail),
 		DnsCfKey:       tools.StringOrNull(d.DnsCfKey),
 		DnsCfToken:     tools.StringOrNull(d.DnsCfToken),
@@ -201,13 +206,15 @@ func convertValidationStructToSchema(d *acmeclient.Validation) (*validationResou
 	}, nil
 }
 
+// overlayValidationManagedFields copies Terraform-managed fields onto an
+// existing Validation. HttpService and TlsalpnService are left untouched so
+// values set in the OPNsense UI are preserved on update (Create still sets
+// dns01-compatible defaults via convertValidationSchemaToStruct).
 func overlayValidationManagedFields(dst *acmeclient.Validation, src *acmeclient.Validation) {
 	dst.Enabled = src.Enabled
 	dst.Name = src.Name
 	dst.Description = src.Description
 	dst.Method = src.Method
-	dst.HttpService = src.HttpService
-	dst.TlsalpnService = src.TlsalpnService
 	dst.DnsService = src.DnsService
 	dst.DnsSleep = src.DnsSleep
 	dst.DnsCfEmail = src.DnsCfEmail

@@ -61,6 +61,9 @@ def api(method: str, path: str, body: dict | None = None) -> tuple[int, dict | l
     except urllib.error.HTTPError as e:
         raw = e.read().decode()
         code = e.code
+    except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+        # GUI/configd may restart during plugin install; callers retry.
+        return 0, str(e)
     try:
         parsed: dict | list | str = json.loads(raw) if raw else {}
     except json.JSONDecodeError:
@@ -73,7 +76,10 @@ def plugin_ready(package: str) -> bool:
     if not probe:
         return False
     method, path = probe
-    code, _ = api(method, path, {} if method.upper() != "GET" else None)
+    try:
+        code, _ = api(method, path, {} if method.upper() != "GET" else None)
+    except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
+        return False
     return code == 200
 
 
@@ -84,11 +90,14 @@ def wait_plugin_ready(package: str, timeout_s: int = 180) -> None:
     method, path = probe
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        if plugin_ready(package):
-            print(f"  probe {method} {path} OK", flush=True)
-            return
-        code, payload = api(method, path, {} if method.upper() != "GET" else None)
-        print(f"  probe {method} {path} HTTP {code}: {payload!r}", flush=True)
+        try:
+            if plugin_ready(package):
+                print(f"  probe {method} {path} OK", flush=True)
+                return
+            code, payload = api(method, path, {} if method.upper() != "GET" else None)
+            print(f"  probe {method} {path} HTTP {code}: {payload!r}", flush=True)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            print(f"  probe {method} {path} connection error: {e}", flush=True)
         time.sleep(3)
     raise RuntimeError(f"plugin API not ready: {method} {path}")
 
