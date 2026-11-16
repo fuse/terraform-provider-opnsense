@@ -83,16 +83,10 @@ func accountResourceSchema() schema.Schema {
 			"status_code": schema.StringAttribute{
 				MarkdownDescription: "Last known ACME account status code from OPNsense (read-only).",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"status_last_update": schema.StringAttribute{
 				MarkdownDescription: "Timestamp of the last ACME account status update (read-only).",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,

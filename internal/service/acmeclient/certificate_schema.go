@@ -121,30 +121,18 @@ func certificateResourceSchema() schema.Schema {
 			"cert_ref_id": schema.StringAttribute{
 				MarkdownDescription: "Trust store certificate reference ID after successful issuance (read-only).",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"last_update": schema.StringAttribute{
 				MarkdownDescription: "Timestamp of the last certificate update (read-only).",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"status_code": schema.StringAttribute{
 				MarkdownDescription: "Last known certificate status code (read-only).",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"status_last_update": schema.StringAttribute{
 				MarkdownDescription: "Timestamp of the last certificate status update (read-only).",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
