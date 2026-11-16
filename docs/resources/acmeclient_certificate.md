@@ -2,7 +2,7 @@
 page_title: "opnsense_acmeclient_certificate Resource - terraform-provider-opnsense"
 subcategory: Acmeclient
 description: |-
-  Manages an ACME Client certificate in the OPNsense os-acme-client plugin.
+  Manages an ACME Client certificate in the OPNsense os-acme-client plugin. Referenced accounts, validations and restart actions must be enabled (OPNsense relation filters).
 ---
 
 # opnsense_acmeclient_certificate (Resource)
@@ -34,7 +34,7 @@ resource "opnsense_acmeclient_certificate" "www" {
   name              = "www.example.com"
   account           = opnsense_acmeclient_account.example.id
   validation_method = opnsense_acmeclient_validation.example.id
-  key_length        = "2048"
+  key_length        = "key_2048"
   auto_renewal      = true
   renew_interval    = "60"
 
@@ -66,7 +66,7 @@ resource "opnsense_acmeclient_certificate" "www" {
 - `description` (String) Optional description for this certificate.
 - `domainalias` (String) Domain alias used when `aliasmode` is `domain`.
 - `enabled` (Boolean) Enable this certificate. Defaults to `true`.
-- `key_length` (String) Private key length or type (e.g. `2048`, `4096`, `ec-256`). Defaults to `2048`.
+- `key_length` (String) Private key length or type (`key_2048`, `key_3072`, `key_4096`, `key_ec256`, `key_ec384`). Defaults to `key_2048`.
 - `ocsp` (Boolean) Enable OCSP Must-Staple. Defaults to `false`.
 - `renew_interval` (String) Days before expiry to attempt renewal. Defaults to `60`.
 - `restart_actions` (Set of String) UUIDs of ACME restart actions to run after issuance or renewal.

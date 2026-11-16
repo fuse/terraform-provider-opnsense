@@ -50,8 +50,17 @@ def api(method: str, path: str, body: dict | None = None) -> tuple[int, dict | l
     return code, parsed
 
 
-def wait_idle(timeout_s: int = 600) -> None:
+def wait_idle(timeout_s: int = 600, *, require_busy_first: bool = False) -> None:
+    """Poll firmware upgradestatus until status is done.
+
+    When require_busy_first is True, keep polling until a non-done status is
+    observed (or a short grace window elapses), so a stale "done" from before
+    install does not make us return before the new job starts.
+    """
     deadline = time.time() + timeout_s
+    saw_busy = not require_busy_first
+    grace_deadline = time.time() + 15 if require_busy_first else 0.0
+
     while time.time() < deadline:
         code, payload = api("POST", "/api/core/firmware/upgradestatus", {})
         if code != 200:
@@ -60,12 +69,35 @@ def wait_idle(timeout_s: int = 600) -> None:
             raise RuntimeError(f"unexpected upgradestatus payload: {payload!r}")
         status = str(payload.get("status", ""))
         print(f"  firmware status={status!r}", flush=True)
-        if status in ("done", "error"):
-            if status == "error":
-                raise RuntimeError(f"firmware reported error: {payload}")
-            return
+
+        if status not in ("done", "error", ""):
+            saw_busy = True
+
+        if status == "error":
+            raise RuntimeError(f"firmware reported error: {payload}")
+
+        if status == "done":
+            if saw_busy or time.time() >= grace_deadline:
+                return
+            # Stale done from before install started; keep waiting briefly.
+            time.sleep(1)
+            continue
+
         time.sleep(3)
+
     raise RuntimeError("timed out waiting for firmware idle")
+
+
+def plugin_api_ready(probe_path: str, timeout_s: int = 120) -> None:
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        code, payload = api("GET", probe_path)
+        if code == 200:
+            print(f"  probe {probe_path} OK", flush=True)
+            return
+        print(f"  probe {probe_path} HTTP {code}: {payload!r}", flush=True)
+        time.sleep(3)
+    raise RuntimeError(f"plugin API not ready: {probe_path}")
 
 
 def main() -> int:
@@ -78,16 +110,33 @@ def main() -> int:
             return 1
 
     package = sys.argv[1]
+    probes = {
+        "os-acme-client": "/api/acmeclient/settings/get",
+    }
+
+    # Already present?
+    probe = probes.get(package)
+    if probe:
+        code, _ = api("GET", probe)
+        if code == 200:
+            print(f"{package} already available ({probe}).", flush=True)
+            return 0
+
     print(f"Installing {package} ...", flush=True)
     code, payload = api("POST", f"/api/core/firmware/install/{package}", {})
     if code != 200:
         raise RuntimeError(f"install HTTP {code}: {payload}")
     if isinstance(payload, dict) and payload.get("status") not in ("ok", "done"):
-        # Already installed often returns failure with a message; treat as soft OK
-        # if the plugin API becomes available after a short wait.
+        # Already installed often returns failure with a message; still wait and probe.
         print(f"  install response: {payload}", flush=True)
 
-    wait_idle()
+    # Give the install job a moment to flip upgradestatus away from a stale "done".
+    time.sleep(2)
+    wait_idle(require_busy_first=True)
+
+    if probe:
+        plugin_api_ready(probe)
+
     print(f"Installed {package}.", flush=True)
     return 0
 

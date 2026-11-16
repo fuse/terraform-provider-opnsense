@@ -24,9 +24,10 @@ func TestAccAcmeclientCertificateResource(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "opnsense_acmeclient_certificate.test",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "opnsense_acmeclient_certificate.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"status_code", "status_last_update", "last_update", "cert_ref_id"},
 			},
 			{
 				Config: testAccAcmeclientCertificateConfig("acc-updated.example.com", false),
@@ -47,7 +48,8 @@ resource "opnsense_acmeclient_account" "test" {
 }
 
 resource "opnsense_acmeclient_validation" "test" {
-  enabled      = false
+  # Must be enabled: certificate.validationMethod only lists enabled validations.
+  enabled      = true
   name         = "acc-cert-validation"
   method       = "dns01"
   dns_service  = "dns_cf"

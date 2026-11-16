@@ -39,7 +39,7 @@ func certificateResourceSchema() schema.Schema {
 	emptySet := setdefault.StaticValue(tools.EmptySetValue(types.StringType))
 
 	return schema.Schema{
-		MarkdownDescription: "Manages an ACME Client certificate in the OPNsense os-acme-client plugin.",
+		MarkdownDescription: "Manages an ACME Client certificate in the OPNsense os-acme-client plugin. Referenced accounts, validations and restart actions must be enabled (OPNsense relation filters).",
 		Version:             1,
 
 		Attributes: map[string]schema.Attribute{
@@ -73,10 +73,10 @@ func certificateResourceSchema() schema.Schema {
 				Required:            true,
 			},
 			"key_length": schema.StringAttribute{
-				MarkdownDescription: "Private key length or type (e.g. `2048`, `4096`, `ec-256`). Defaults to `2048`.",
+				MarkdownDescription: "Private key length or type (`key_2048`, `key_3072`, `key_4096`, `key_ec256`, `key_ec384`). Defaults to `key_2048`.",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString("2048"),
+				Default:             stringdefault.StaticString("key_2048"),
 			},
 			"ocsp": schema.BoolAttribute{
 				MarkdownDescription: "Enable OCSP Must-Staple. Defaults to `false`.",

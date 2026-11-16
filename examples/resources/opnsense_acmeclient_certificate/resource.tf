@@ -20,7 +20,7 @@ resource "opnsense_acmeclient_certificate" "www" {
   name              = "www.example.com"
   account           = opnsense_acmeclient_account.example.id
   validation_method = opnsense_acmeclient_validation.example.id
-  key_length        = "2048"
+  key_length        = "key_2048"
   auto_renewal      = true
   renew_interval    = "60"
 

@@ -18,7 +18,7 @@ func TestConvertCertificateSchemaToStruct(t *testing.T) {
 		AltNames:         tools.StringSliceToSet([]string{"www.example.com", "api.example.com"}),
 		Account:          types.StringValue("account-uuid"),
 		ValidationMethod: types.StringValue("validation-uuid"),
-		KeyLength:        types.StringValue("2048"),
+		KeyLength:        types.StringValue("key_2048"),
 		Ocsp:             types.BoolValue(false),
 		AutoRenewal:      types.BoolValue(true),
 		RenewInterval:    types.StringValue("60"),
@@ -34,7 +34,7 @@ func TestConvertCertificateSchemaToStruct(t *testing.T) {
 	require.Equal(t, "example.com", cert.Name)
 	require.Equal(t, api.SelectedMap("account-uuid"), cert.Account)
 	require.Equal(t, api.SelectedMap("validation-uuid"), cert.ValidationMethod)
-	require.Equal(t, api.SelectedMap("2048"), cert.KeyLength)
+	require.Equal(t, api.SelectedMap("key_2048"), cert.KeyLength)
 	require.Equal(t, "1", cert.AutoRenewal)
 	require.Equal(t, "60", cert.RenewInterval)
 	require.ElementsMatch(t, []string{"www.example.com", "api.example.com"}, []string(cert.AltNames))
@@ -48,7 +48,7 @@ func TestConvertCertificateStructToSchema(t *testing.T) {
 		AltNames:         api.SelectedMapList{"www.example.com"},
 		Account:          api.SelectedMap("account-uuid"),
 		ValidationMethod: api.SelectedMap("validation-uuid"),
-		KeyLength:        api.SelectedMap("2048"),
+		KeyLength:        api.SelectedMap("key_2048"),
 		Ocsp:             "0",
 		AutoRenewal:      "1",
 		RenewInterval:    "60",
