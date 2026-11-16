@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/browningluke/opnsense-go/pkg/api"
+	"github.com/browningluke/terraform-provider-opnsense/internal/service/acmeclient"
 	"github.com/browningluke/terraform-provider-opnsense/internal/service/auth"
 	"github.com/browningluke/terraform-provider-opnsense/internal/service/cron"
 	"github.com/browningluke/terraform-provider-opnsense/internal/service/diagnostics"
@@ -291,6 +292,7 @@ func (p *opnsenseProvider) Configure(ctx context.Context, req provider.Configure
 
 func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Resource {
 	controllers := [][]func() resource.Resource{
+		acmeclient.Resources(ctx),
 		auth.Resources(ctx),
 		cron.Resources(ctx),
 		diagnostics.Resources(ctx),
@@ -316,6 +318,7 @@ func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Reso
 
 func (p *opnsenseProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	controllers := [][]func() datasource.DataSource{
+		acmeclient.DataSources(ctx),
 		auth.DataSources(ctx),
 		cron.DataSources(ctx),
 		diagnostics.DataSources(ctx),

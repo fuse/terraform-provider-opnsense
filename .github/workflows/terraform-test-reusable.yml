@@ -63,7 +63,7 @@ jobs:
               "firewall": ["firewall"],
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
-              "other": ["auth", "cron", "diagnostics", "dnsmasq", "interfaces", "kea",
+              "other": ["acmeclient", "auth", "cron", "diagnostics", "dnsmasq", "interfaces", "kea",
                         "openvpn", "quagga", "routes", "trust", "wireguard"],
           }
           # Non-service packages, tested with "other" on full-suite runs.
@@ -200,6 +200,9 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Configure OPNsense for tests
         run: python3 scripts/configure-opnsense.py
+      - name: Install os-acme-client plugin
+        if: contains(matrix.packages, 'acmeclient')
+        run: python3 scripts/install-opnsense-plugin.py os-acme-client
       - name: Run terraform tests
         run: |
           env TF_ACC=1 go test -v -p 1 -timeout 120m ${{ matrix.packages }}
