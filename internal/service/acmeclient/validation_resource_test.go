@@ -29,6 +29,13 @@ func TestAccAcmeclientValidationResource(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"dns_cf_key", "dns_cf_token"},
 			},
+			{
+				Config: testAccAcmeclientValidationConfig("acc-cf-dns-updated", false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_acmeclient_validation.test", "name", "acc-cf-dns-updated"),
+					resource.TestCheckResourceAttr("opnsense_acmeclient_validation.test", "enabled", "false"),
+				),
+			},
 		},
 	})
 }
