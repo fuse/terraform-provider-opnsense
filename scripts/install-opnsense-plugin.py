@@ -1,23 +1,37 @@
 #!/usr/bin/env python3
-"""Install an OPNsense plugin via the firmware API and wait until idle.
+"""Install an OPNsense plugin and wait until its API is ready.
+
+Prefers QEMU guest-agent `pkg install` when QEMU_GA_SOCKET is available
+(CI), and falls back to the firmware API.
 
 Usage:
   install-opnsense-plugin.py os-acme-client
 
 Environment:
   OPNSENSE_URI, OPNSENSE_API_KEY, OPNSENSE_API_SECRET
+  QEMU_GA_SOCKET (optional, default /tmp/qemu-virtserialport.sock)
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import os
+import select
+import socket
 import ssl
 import sys
 import time
 import urllib.error
 import urllib.request
 from base64 import b64encode
+
+QEMU_GA_SOCKET = os.environ.get("QEMU_GA_SOCKET", "/tmp/qemu-virtserialport.sock")
+
+PROBES = {
+    # Prefer POST search: GET without a body often returns "Invalid JSON syntax".
+    "os-acme-client": ("POST", "/api/acmeclient/accounts/search"),
+}
 
 
 def api(method: str, path: str, body: dict | None = None) -> tuple[int, dict | list | str]:
@@ -32,8 +46,6 @@ def api(method: str, path: str, body: dict | None = None) -> tuple[int, dict | l
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    # POST/PUT: always send JSON (OPNsense rejects body-less POSTs with
-    # "Invalid JSON syntax"). GET: no body.
     data = None
     if method.upper() != "GET":
         payload = {} if body is None else body
@@ -56,13 +68,88 @@ def api(method: str, path: str, body: dict | None = None) -> tuple[int, dict | l
     return code, parsed
 
 
-def wait_idle(timeout_s: int = 600, *, require_busy_first: bool = False) -> None:
-    """Poll firmware upgradestatus until status is done.
+def plugin_ready(package: str) -> bool:
+    probe = PROBES.get(package)
+    if not probe:
+        return False
+    method, path = probe
+    code, _ = api(method, path, {} if method.upper() != "GET" else None)
+    return code == 200
 
-    When require_busy_first is True, keep polling until a non-done status is
-    observed (or a short grace window elapses), so a stale "done" from before
-    install does not make us return before the new job starts.
-    """
+
+def wait_plugin_ready(package: str, timeout_s: int = 180) -> None:
+    probe = PROBES.get(package)
+    if not probe:
+        return
+    method, path = probe
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if plugin_ready(package):
+            print(f"  probe {method} {path} OK", flush=True)
+            return
+        code, payload = api(method, path, {} if method.upper() != "GET" else None)
+        print(f"  probe {method} {path} HTTP {code}: {payload!r}", flush=True)
+        time.sleep(3)
+    raise RuntimeError(f"plugin API not ready: {method} {path}")
+
+
+def qemu_ga(command: dict, timeout: float = 30) -> dict:
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        client.settimeout(timeout)
+        client.connect(QEMU_GA_SOCKET)
+        client.sendall((json.dumps(command) + "\n").encode())
+        response = b""
+        while True:
+            ready, _, _ = select.select([client], [], [], timeout)
+            if not ready:
+                raise TimeoutError("qemu-ga response timeout")
+            chunk = client.recv(8192)
+            if not chunk:
+                break
+            response += chunk
+            if b"\n" in chunk:
+                break
+    return json.loads(response.decode())
+
+
+def install_via_qemu_ga(package: str) -> None:
+    print(f"Installing {package} via qemu-ga pkg ...", flush=True)
+    started = qemu_ga(
+        {
+            "execute": "guest-exec",
+            "arguments": {
+                "path": "/usr/sbin/pkg",
+                "arg": ["install", "-y", package],
+                "capture-output": True,
+            },
+        }
+    )
+    pid = started.get("return", {}).get("pid")
+    if not pid:
+        raise RuntimeError(f"guest-exec failed: {started}")
+
+    deadline = time.time() + 600
+    while time.time() < deadline:
+        status = qemu_ga({"execute": "guest-exec-status", "arguments": {"pid": pid}})
+        ret = status.get("return") or {}
+        if not ret.get("exited"):
+            time.sleep(2)
+            continue
+        exitcode = ret.get("exitcode")
+        out = base64.b64decode(ret.get("out-data") or "").decode(errors="replace")
+        err = base64.b64decode(ret.get("err-data") or "").decode(errors="replace")
+        if out.strip():
+            print(out.strip(), flush=True)
+        if err.strip():
+            print(err.strip(), flush=True)
+        if exitcode not in (0, None):
+            # pkg may return non-zero if already installed; still probe API.
+            print(f"  pkg exitcode={exitcode}", flush=True)
+        return
+    raise RuntimeError("timed out waiting for pkg install via qemu-ga")
+
+
+def wait_idle(timeout_s: int = 600, *, require_busy_first: bool = False) -> None:
     deadline = time.time() + timeout_s
     saw_busy = not require_busy_first
     grace_deadline = time.time() + 15 if require_busy_first else 0.0
@@ -85,7 +172,6 @@ def wait_idle(timeout_s: int = 600, *, require_busy_first: bool = False) -> None
         if status == "done":
             if saw_busy or time.time() >= grace_deadline:
                 return
-            # Stale done from before install started; keep waiting briefly.
             time.sleep(1)
             continue
 
@@ -94,16 +180,16 @@ def wait_idle(timeout_s: int = 600, *, require_busy_first: bool = False) -> None
     raise RuntimeError("timed out waiting for firmware idle")
 
 
-def plugin_api_ready(method: str, path: str, timeout_s: int = 120) -> None:
-    deadline = time.time() + timeout_s
-    while time.time() < deadline:
-        code, payload = api(method, path, {} if method.upper() != "GET" else None)
-        if code == 200:
-            print(f"  probe {method} {path} OK", flush=True)
-            return
-        print(f"  probe {method} {path} HTTP {code}: {payload!r}", flush=True)
-        time.sleep(3)
-    raise RuntimeError(f"plugin API not ready: {method} {path}")
+def install_via_firmware_api(package: str) -> None:
+    print(f"Installing {package} via firmware API ...", flush=True)
+    code, payload = api("POST", f"/api/core/firmware/install/{package}", {})
+    if code != 200:
+        raise RuntimeError(f"install HTTP {code}: {payload}")
+    if isinstance(payload, dict) and payload.get("status") not in ("ok", "done"):
+        print(f"  install response: {payload}", flush=True)
+
+    time.sleep(2)
+    wait_idle(require_busy_first=True)
 
 
 def main() -> int:
@@ -116,38 +202,32 @@ def main() -> int:
             return 1
 
     package = sys.argv[1]
-    # Prefer POST search endpoints: GET without a body often returns
-    # "Invalid JSON syntax" on OPNsense plugin controllers.
-    probes = {
-        "os-acme-client": ("POST", "/api/acmeclient/accounts/search"),
-    }
+    if plugin_ready(package):
+        probe = PROBES[package]
+        print(f"{package} already available ({probe[0]} {probe[1]}).", flush=True)
+        return 0
 
-    # Already present?
-    probe = probes.get(package)
-    if probe:
-        method, path = probe
-        code, _ = api(method, path, {})
-        if code == 200:
-            print(f"{package} already available ({method} {path}).", flush=True)
-            return 0
+    qemu_available = os.path.exists(QEMU_GA_SOCKET)
+    errors: list[str] = []
 
-    print(f"Installing {package} ...", flush=True)
-    code, payload = api("POST", f"/api/core/firmware/install/{package}", {})
-    if code != 200:
-        raise RuntimeError(f"install HTTP {code}: {payload}")
-    if isinstance(payload, dict) and payload.get("status") not in ("ok", "done"):
-        # Already installed often returns failure with a message; still wait and probe.
-        print(f"  install response: {payload}", flush=True)
+    if qemu_available:
+        try:
+            install_via_qemu_ga(package)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"qemu-ga: {exc}")
+            print(f"WARNING: qemu-ga install failed: {exc}", flush=True)
 
-    # Give the install job a moment to flip upgradestatus away from a stale "done".
-    time.sleep(2)
-    wait_idle(require_busy_first=True)
+    if not plugin_ready(package):
+        try:
+            install_via_firmware_api(package)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"firmware: {exc}")
+            print(f"WARNING: firmware install failed: {exc}", flush=True)
 
-    if probe:
-        method, path = probe
-        plugin_api_ready(method, path)
-
+    wait_plugin_ready(package)
     print(f"Installed {package}.", flush=True)
+    if errors:
+        print(f"  notes: {'; '.join(errors)}", flush=True)
     return 0
 
 
