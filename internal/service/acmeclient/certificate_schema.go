@@ -4,6 +4,7 @@ import (
 	"github.com/browningluke/opnsense-go/pkg/acmeclient"
 	"github.com/browningluke/opnsense-go/pkg/api"
 	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -151,6 +152,93 @@ func certificateResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+		},
+	}
+}
+
+func certificateDataSourceSchema() dschema.Schema {
+	return dschema.Schema{
+		MarkdownDescription: "Retrieves an ACME Client certificate from the OPNsense os-acme-client plugin by UUID.",
+
+		Attributes: map[string]dschema.Attribute{
+			"id": dschema.StringAttribute{
+				Required:            true,
+				MarkdownDescription: "UUID of the ACME certificate.",
+			},
+			"enabled": dschema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether this certificate is enabled.",
+			},
+			"name": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Common Name (CN) for the certificate.",
+			},
+			"description": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Optional description for this certificate.",
+			},
+			"alt_names": dschema.SetAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				MarkdownDescription: "Subject Alternative Names (DNS names).",
+			},
+			"account": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "UUID of the ACME account used to request the certificate.",
+			},
+			"validation_method": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "UUID of the ACME validation method used for challenges.",
+			},
+			"key_length": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Private key length or type.",
+			},
+			"ocsp": dschema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether OCSP Must-Staple is enabled.",
+			},
+			"auto_renewal": dschema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether automatic renewal is enabled.",
+			},
+			"renew_interval": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Days before expiry to attempt renewal.",
+			},
+			"aliasmode": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "DNS alias mode.",
+			},
+			"domainalias": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Domain alias used when `aliasmode` is `domain`.",
+			},
+			"challengealias": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Challenge alias used when `aliasmode` is `challenge`.",
+			},
+			"restart_actions": dschema.SetAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				MarkdownDescription: "UUIDs of ACME restart actions to run after issuance or renewal.",
+			},
+			"cert_ref_id": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Trust store certificate reference ID after successful issuance.",
+			},
+			"last_update": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Timestamp of the last certificate update.",
+			},
+			"status_code": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Last known certificate status code.",
+			},
+			"status_last_update": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Timestamp of the last certificate status update.",
 			},
 		},
 	}

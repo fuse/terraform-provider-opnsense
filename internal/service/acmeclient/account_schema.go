@@ -4,6 +4,7 @@ import (
 	"github.com/browningluke/opnsense-go/pkg/acmeclient"
 	"github.com/browningluke/opnsense-go/pkg/api"
 	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -99,6 +100,65 @@ func accountResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+		},
+	}
+}
+
+func accountDataSourceSchema() dschema.Schema {
+	return dschema.Schema{
+		MarkdownDescription: "Retrieves an ACME Client account from the OPNsense os-acme-client plugin by UUID.",
+
+		Attributes: map[string]dschema.Attribute{
+			"id": dschema.StringAttribute{
+				Required:            true,
+				MarkdownDescription: "UUID of the ACME account.",
+			},
+			"enabled": dschema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether this ACME account is enabled.",
+			},
+			"name": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Display name for the ACME account.",
+			},
+			"description": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Optional description for this ACME account.",
+			},
+			"email": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Contact email address registered with the ACME CA.",
+			},
+			"ca": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Certificate authority identifier.",
+			},
+			"custom_ca": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Custom ACME CA directory URL when `ca` is set to a custom value.",
+			},
+			"eab_kid": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "External Account Binding (EAB) key identifier.",
+			},
+			"eab_hmac": dschema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "External Account Binding (EAB) HMAC key.",
+			},
+			"account_key": dschema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "ACME account private key.",
+			},
+			"status_code": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Last known ACME account status code from OPNsense.",
+			},
+			"status_last_update": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Timestamp of the last ACME account status update.",
 			},
 		},
 	}

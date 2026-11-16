@@ -4,6 +4,7 @@ import (
 	"github.com/browningluke/opnsense-go/pkg/acmeclient"
 	"github.com/browningluke/opnsense-go/pkg/api"
 	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -52,6 +53,35 @@ func actionResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+		},
+	}
+}
+
+func actionDataSourceSchema() dschema.Schema {
+	return dschema.Schema{
+		MarkdownDescription: "Retrieves an ACME Client restart action from the OPNsense os-acme-client plugin by UUID.",
+
+		Attributes: map[string]dschema.Attribute{
+			"id": dschema.StringAttribute{
+				Required:            true,
+				MarkdownDescription: "UUID of the restart action.",
+			},
+			"enabled": dschema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether this restart action is enabled.",
+			},
+			"name": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Display name for the restart action.",
+			},
+			"description": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Optional description for this restart action.",
+			},
+			"type": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Action type.",
 			},
 		},
 	}

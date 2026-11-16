@@ -4,6 +4,7 @@ import (
 	"github.com/browningluke/opnsense-go/pkg/acmeclient"
 	"github.com/browningluke/opnsense-go/pkg/api"
 	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -93,6 +94,65 @@ func validationResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+		},
+	}
+}
+
+func validationDataSourceSchema() dschema.Schema {
+	return dschema.Schema{
+		MarkdownDescription: "Retrieves an ACME Client validation method from the OPNsense os-acme-client plugin by UUID.",
+
+		Attributes: map[string]dschema.Attribute{
+			"id": dschema.StringAttribute{
+				Required:            true,
+				MarkdownDescription: "UUID of the validation method.",
+			},
+			"enabled": dschema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether this validation method is enabled.",
+			},
+			"name": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Display name for the validation method.",
+			},
+			"description": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Optional description for this validation method.",
+			},
+			"method": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Challenge type.",
+			},
+			"dns_service": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "DNS-01 provider identifier.",
+			},
+			"dns_sleep": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Seconds to wait after publishing DNS records before validation.",
+			},
+			"dns_cf_email": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Cloudflare account email (Global API Key auth).",
+			},
+			"dns_cf_key": dschema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "Cloudflare Global API Key.",
+			},
+			"dns_cf_token": dschema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "Cloudflare API token.",
+			},
+			"dns_cf_account_id": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Optional Cloudflare account ID.",
+			},
+			"dns_cf_zone_id": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Optional Cloudflare zone ID to limit token scope.",
 			},
 		},
 	}

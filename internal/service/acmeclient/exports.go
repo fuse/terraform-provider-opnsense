@@ -12,10 +12,17 @@ func Resources(ctx context.Context) []func() resource.Resource {
 		newAccountResource,
 		newActionResource,
 		newCertificateResource,
+		newSettingsResource,
 		newValidationResource,
 	}
 }
 
 func DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		newAccountDataSource,
+		newActionDataSource,
+		newCertificateDataSource,
+		newSettingsDataSource,
+		newValidationDataSource,
+	}
 }
