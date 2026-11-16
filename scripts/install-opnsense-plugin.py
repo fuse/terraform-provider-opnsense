@@ -27,12 +27,18 @@ def api(method: str, path: str, body: dict | None = None) -> tuple[int, dict | l
     credentials = b64encode(f"{key}:{secret}".encode()).decode()
     headers = {
         "Authorization": f"Basic {credentials}",
-        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    data = None if body is None else json.dumps(body).encode()
+    # POST/PUT: always send JSON (OPNsense rejects body-less POSTs with
+    # "Invalid JSON syntax"). GET: no body.
+    data = None
+    if method.upper() != "GET":
+        payload = {} if body is None else body
+        data = json.dumps(payload).encode()
+        headers["Content-Type"] = "application/json"
     req = urllib.request.Request(
         base + path, data=data, headers=headers, method=method
     )
@@ -88,16 +94,16 @@ def wait_idle(timeout_s: int = 600, *, require_busy_first: bool = False) -> None
     raise RuntimeError("timed out waiting for firmware idle")
 
 
-def plugin_api_ready(probe_path: str, timeout_s: int = 120) -> None:
+def plugin_api_ready(method: str, path: str, timeout_s: int = 120) -> None:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        code, payload = api("GET", probe_path)
+        code, payload = api(method, path, {} if method.upper() != "GET" else None)
         if code == 200:
-            print(f"  probe {probe_path} OK", flush=True)
+            print(f"  probe {method} {path} OK", flush=True)
             return
-        print(f"  probe {probe_path} HTTP {code}: {payload!r}", flush=True)
+        print(f"  probe {method} {path} HTTP {code}: {payload!r}", flush=True)
         time.sleep(3)
-    raise RuntimeError(f"plugin API not ready: {probe_path}")
+    raise RuntimeError(f"plugin API not ready: {method} {path}")
 
 
 def main() -> int:
@@ -110,16 +116,19 @@ def main() -> int:
             return 1
 
     package = sys.argv[1]
+    # Prefer POST search endpoints: GET without a body often returns
+    # "Invalid JSON syntax" on OPNsense plugin controllers.
     probes = {
-        "os-acme-client": "/api/acmeclient/settings/get",
+        "os-acme-client": ("POST", "/api/acmeclient/accounts/search"),
     }
 
     # Already present?
     probe = probes.get(package)
     if probe:
-        code, _ = api("GET", probe)
+        method, path = probe
+        code, _ = api(method, path, {})
         if code == 200:
-            print(f"{package} already available ({probe}).", flush=True)
+            print(f"{package} already available ({method} {path}).", flush=True)
             return 0
 
     print(f"Installing {package} ...", flush=True)
@@ -135,7 +144,8 @@ def main() -> int:
     wait_idle(require_busy_first=True)
 
     if probe:
-        plugin_api_ready(probe)
+        method, path = probe
+        plugin_api_ready(method, path)
 
     print(f"Installed {package}.", flush=True)
     return 0
