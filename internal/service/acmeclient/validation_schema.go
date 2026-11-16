@@ -60,8 +60,10 @@ func validationResourceSchema() schema.Schema {
 				Default:             stringdefault.StaticString("dns_cf"),
 			},
 			"dns_sleep": schema.StringAttribute{
-				MarkdownDescription: "Seconds to wait after publishing DNS records before validation.",
+				MarkdownDescription: "Seconds to wait after publishing DNS records before validation. Defaults to `0`.",
 				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("0"),
 			},
 			"dns_cf_email": schema.StringAttribute{
 				MarkdownDescription: "Cloudflare account email (Global API Key auth).",
@@ -100,13 +102,21 @@ func validationResourceSchema() schema.Schema {
 // Unmanaged dns_* stubs stay at zero values (Create) or are overlaid onto an
 // existing Get result (Update) via overlayValidationManagedFields.
 func convertValidationSchemaToStruct(d *validationResourceModel) (*acmeclient.Validation, error) {
+	dnsSleep := d.DnsSleep.ValueString()
+	if dnsSleep == "" {
+		dnsSleep = "0"
+	}
+
+	// OPNsense requires http_service / tlsalpn_service even for dns01 methods.
 	return &acmeclient.Validation{
 		Enabled:        tools.BoolToString(d.Enabled.ValueBool()),
 		Name:           d.Name.ValueString(),
 		Description:    d.Description.ValueString(),
 		Method:         api.SelectedMap(d.Method.ValueString()),
+		HttpService:    api.SelectedMap("opnsense"),
+		TlsalpnService: api.SelectedMap("acme"),
 		DnsService:     api.SelectedMap(d.DnsService.ValueString()),
-		DnsSleep:       d.DnsSleep.ValueString(),
+		DnsSleep:       dnsSleep,
 		DnsCfEmail:     d.DnsCfEmail.ValueString(),
 		DnsCfKey:       d.DnsCfKey.ValueString(),
 		DnsCfToken:     d.DnsCfToken.ValueString(),
@@ -136,6 +146,8 @@ func overlayValidationManagedFields(dst *acmeclient.Validation, src *acmeclient.
 	dst.Name = src.Name
 	dst.Description = src.Description
 	dst.Method = src.Method
+	dst.HttpService = src.HttpService
+	dst.TlsalpnService = src.TlsalpnService
 	dst.DnsService = src.DnsService
 	dst.DnsSleep = src.DnsSleep
 	dst.DnsCfEmail = src.DnsCfEmail

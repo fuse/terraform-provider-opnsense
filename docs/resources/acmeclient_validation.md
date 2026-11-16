@@ -36,7 +36,7 @@ resource "opnsense_acmeclient_validation" "cloudflare" {
 - `dns_cf_token` (String, Sensitive) Cloudflare API token (sensitive). Preferred over Global API Key.
 - `dns_cf_zone_id` (String) Optional Cloudflare zone ID to limit token scope.
 - `dns_service` (String) DNS-01 provider identifier. Defaults to `dns_cf` (Cloudflare).
-- `dns_sleep` (String) Seconds to wait after publishing DNS records before validation.
+- `dns_sleep` (String) Seconds to wait after publishing DNS records before validation. Defaults to `0`.
 - `enabled` (Boolean) Enable this validation method. Defaults to `true`.
 - `method` (String) Challenge type. Defaults to `dns01`.
 
