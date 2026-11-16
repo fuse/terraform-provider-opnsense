@@ -7,7 +7,7 @@ description: |-
 
 # opnsense_acmeclient_certificate (Resource)
 
-Manages an ACME Client certificate in the OPNsense os-acme-client plugin.
+Manages an ACME Client certificate in the OPNsense os-acme-client plugin. Referenced accounts, validations and restart actions must be enabled (OPNsense relation filters).
 
 ## Example Usage
 
