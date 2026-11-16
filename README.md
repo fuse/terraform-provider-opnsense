@@ -191,10 +191,10 @@ The following is a non-exhaustive list of the plugin APIs OPNsense supports. The
 | Plugin/Controller/Resource     | Resource | Data Source |
 |--------------------------------|----------|-------------|
 | `Acmeclient/Settings`          | ❌        | ❌           |
-| `Acmeclient/Account`           | ❌        | ❌           |
-| `Acmeclient/Validation`        | ❌        | ❌           |
-| `Acmeclient/Certificates`      | ❌        | ❌           |
-| `Acmeclient/Action`            | ❌        | ❌           |
+| `Acmeclient/Account`           | ✅        | ❌           |
+| `Acmeclient/Validation`        | ✅        | ❌           |
+| `Acmeclient/Certificates`      | ✅        | ❌           |
+| `Acmeclient/Action`            | ✅        | ❌           |
 | `Haproxy/Maintenance`          | ❌        | ❌           |
 | `Haproxy/Settings`             | ❌        | ❌           |
 | `Haproxy/Settings/Acl`         | ❌        | ❌           |
