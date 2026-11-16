@@ -113,6 +113,13 @@ func (r *settingsResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	_, err = r.client.Acmeclient().ServiceReconfigure(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error",
+			fmt.Sprintf("Unable to reconfigure ACME Client after settings update, got error: %s", err))
+		return
+	}
+
 	result, err := r.client.Acmeclient().SettingsGet(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
