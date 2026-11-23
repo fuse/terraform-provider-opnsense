@@ -2,28 +2,39 @@
 page_title: "opnsense_interfaces_vip Resource - terraform-provider-opnsense"
 subcategory: Interfaces
 description: |-
-  Virtual IPs allow an OPNsense firewall to assign multiple IP addresses to the same network interface.
+  Virtual IPs allow an OPNsense firewall to assign multiple IP addresses to the same network interface, including CARP.
 ---
 
 # opnsense_interfaces_vip (Resource)
 
-Virtual IPs allow an OPNsense firewall to assign multiple IP addresses to the same network interface.
+Virtual IPs allow an OPNsense firewall to assign multiple IP addresses to the same network interface, including CARP.
 
 ## Example Usage
 
 ```terraform
 resource "opnsense_interfaces_vip" "proxyarp_example_vip" {
-  mode = "proxyarp"
+  mode        = "proxyarp"
   interface   = "wan"
-  network = "192.168.0.189/32"
+  network     = "192.168.0.189/32"
   description = "proxyarp example vip"
 }
 
 resource "opnsense_interfaces_vip" "ipalias_example_vip" {
-    mode        = "ipalias"
-    interface   = "wan"
-    network     = "192.168.0.166/32"
-    description = "ipalias example vip"
+  mode        = "ipalias"
+  interface   = "wan"
+  network     = "192.168.0.166/32"
+  description = "ipalias example vip"
+}
+
+resource "opnsense_interfaces_vip" "carp_example_vip" {
+  mode        = "carp"
+  interface   = "opt1"
+  network     = "192.168.10.254/24"
+  description = "carp example vip"
+  password    = "changeme"
+  vhid        = "1"
+  advbase     = "1"
+  advskew     = "0"
 }
 ```
 
@@ -36,10 +47,19 @@ resource "opnsense_interfaces_vip" "ipalias_example_vip" {
 
 ### Optional
 
+- `advbase` (String) CARP advertisement base (seconds). Defaults to `1`.
+- `advskew` (String) CARP advertisement skew (0-254). Lower values prefer MASTER. Defaults to `0`.
 - `description` (String) Optional description here for your reference (not parsed).
 - `gateway` (String) For some interface types a gateway is required to configure an IP Alias (ppp/pppoe/tun), leave this field empty for all other interface types.
 - `interface` (String) Choose which interface this VIP applies to.
-- `mode` (String) Mode of the VIP. One of `ipalias` or `proxyarp`. `proxyarp` cannot be bound to by anything running on the firewall, such as IPsec, OpenVPN, etc. In most cases an `ipalias` should be used.
+- `mode` (String) Mode of the VIP. One of `ipalias`, `carp`, or `proxyarp`. `proxyarp` cannot be bound to by anything running on the firewall, such as IPsec, OpenVPN, etc. In most cases an `ipalias` should be used. CARP requires `password` and `vhid`.
+- `nobind` (Boolean) Prevent binding services to this VIP address. Defaults to `false`.
+- `noexpand` (Boolean) Do not expand this VIP into firewall rules automatically. Defaults to `false`.
+- `nosync` (Boolean) Exclude this VIP from XMLRPC sync. Defaults to `false`.
+- `password` (String, Sensitive) CARP password (shared across peers with the same VHID). Required when `mode` is `carp`.
+- `peer` (String) Optional CARP peer IPv4 address (leave empty for multicast).
+- `peer6` (String) Optional CARP peer IPv6 address (leave empty for multicast).
+- `vhid` (String) CARP Virtual Host ID (1-255). Required when `mode` is `carp`.
 
 ### Read-Only
 
