@@ -163,7 +163,7 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Openvpn/Instances/Static Key`   | ✅        | ✅           |
 | `Openvpn/Instances/Generate Key` | ✅ (ephemeral) |        |
 | `Routes/Route`                   | ✅        | ✅           |
-| `Routing/Gateway`                | ❌        | ❌           |
+| `Routing/Gateway`                | ✅        | ❌           |
 | `Syslog/Settings`                | ❌        | ❌           |
 | `Syslog/Settings/Destination`    | ❌        | ❌           |
 | `Trafficshaper/Pipe`             | ❌        | ❌           |
