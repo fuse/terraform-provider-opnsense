@@ -19,6 +19,7 @@ var _ resource.Resource = &userResource{}
 var _ resource.ResourceWithConfigure = &userResource{}
 var _ resource.ResourceWithImportState = &userResource{}
 var _ resource.ResourceWithConfigValidators = &userResource{}
+var _ resource.ResourceWithUpgradeState = &userResource{}
 
 func newUserResource() resource.Resource {
 	return &userResource{}
@@ -226,4 +227,23 @@ func (r *userResource) readUserModel(ctx context.Context, id string, prior *user
 	}
 
 	return model, nil
+}
+
+func (r *userResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	// Identity upgrade: early lab states were written before Schema.Version=1.
+	prior := userResourceSchema()
+	prior.Version = 0
+	return map[int64]resource.StateUpgrader{
+		0: {
+			PriorSchema: &prior,
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var state userResourceModel
+				resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+			},
+		},
+	}
 }
